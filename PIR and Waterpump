@@ -1,0 +1,39 @@
+#define PIR_PIN D1
+#define PUMP_RELAY_PIN D8
+
+// Most relay modules are LOW-level trigger
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(PIR_PIN, INPUT);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+
+  // Pump OFF at startup
+  digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+
+  Serial.println("PIR + Water Pump Test");
+  Serial.println("PIR warming up...");
+  delay(30000); // PIR needs warm-up time
+  Serial.println("System ready.");
+}
+
+void loop() {
+  int pirValue = digitalRead(PIR_PIN);
+
+  Serial.print("PIR Value: ");
+  Serial.println(pirValue);
+
+  if (pirValue == HIGH) {
+    digitalWrite(PUMP_RELAY_PIN, RELAY_ON);
+    Serial.println("Motion detected → Pump ON");
+  } else {
+    digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+    Serial.println("No motion → Pump OFF");
+  }
+
+  Serial.println("--------------------");
+  delay(500);
+}
