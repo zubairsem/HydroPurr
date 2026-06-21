@@ -1,0 +1,22 @@
+#define LDR_PIN A0
+
+void setup() {
+  Serial.begin(115200);
+}
+
+void loop() {
+  int ldrValue = analogRead(LDR_PIN);
+
+  Serial.print("LDR Raw Value: ");
+  Serial.println(ldrValue);
+
+  // Terbalikkan logic here
+  if (ldrValue > 500) {
+    Serial.println("Condition: DARK");
+  } else {
+    Serial.println("Condition: BRIGHT");
+  }
+
+  Serial.println("------------------");
+  delay(500);
+}
