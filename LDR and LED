@@ -1,0 +1,39 @@
+#define LDR_PIN A0
+#define LED_RELAY_PIN D0
+
+// Most relay modules are LOW-level trigger
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
+// Your LDR reading is terbalik:
+// Higher value = darker
+// Lower value = brighter
+int ldrThreshold = 500;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(LED_RELAY_PIN, OUTPUT);
+
+  // Make sure USB LED is OFF at startup
+  digitalWrite(LED_RELAY_PIN, RELAY_OFF);
+}
+
+void loop() {
+  int ldrValue = analogRead(LDR_PIN);
+
+  Serial.print("LDR Value: ");
+  Serial.println(ldrValue);
+
+  // If no light / dark detected, turn ON USB LED
+  if (ldrValue > ldrThreshold) {
+    digitalWrite(LED_RELAY_PIN, RELAY_ON);
+    Serial.println("Dark detected → USB LED ON");
+  } else {
+    digitalWrite(LED_RELAY_PIN, RELAY_OFF);
+    Serial.println("Bright detected → USB LED OFF");
+  }
+
+  Serial.println("--------------------");
+  delay(500);
+}
