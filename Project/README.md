@@ -1,4 +1,4 @@
-<h1>Blynk Dashboard</h1>
+<h1>Product</h1>
 
 <p align="center">
   <img src="1.jpeg" width="45%">
