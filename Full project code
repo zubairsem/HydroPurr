@@ -1,0 +1,210 @@
+#define BLYNK_TEMPLATE_ID "TMPL65NgA-utp"
+#define BLYNK_TEMPLATE_NAME "HydroPurrr"
+#define BLYNK_AUTH_TOKEN "DaUxT-dFWTsD8iSwvQba3QAX2t7f5HEO"
+
+#include <ESP8266WiFi.h>
+#include <BlynkSimpleEsp8266.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <U8g2lib.h>
+#include <Wire.h>
+
+char ssid[] = "wifi_id";
+char pass[] = "wifi_pass";
+
+// ===================== PIN SETUP =====================
+#define PIR_PIN D1
+#define WATER_SENSOR_PIN D2
+#define TEMP_PIN D5
+#define LDR_PIN A0
+
+#define USB_LED_RELAY_PIN D0
+#define PUMP_RELAY_PIN D8
+#define BUZZER_PIN D4
+
+// ===================== RELAY / BUZZER LOGIC =====================
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
+#define BUZZER_ON HIGH
+#define BUZZER_OFF LOW
+
+// ===================== LDR SETTING =====================
+int ldrThreshold = 800;
+
+// ===================== BLYNK MODE & MANUAL CONTROL =====================
+// V7: 0 = AUTO, 1 = MANUAL
+int systemMode = 0;
+
+int manualLed = 0;   // V8
+int manualPump = 0;  // V9
+
+BLYNK_WRITE(V9) {
+  systemMode = param.asInt();
+  Serial.print("System Mode: ");
+  Serial.println(systemMode == 0 ? "AUTO" : "MANUAL");
+}
+
+BLYNK_WRITE(V7) {
+  manualLed = param.asInt();
+  Serial.print("Manual LED: ");
+  Serial.println(manualLed);
+}
+
+BLYNK_WRITE(V8) {
+  manualPump = param.asInt();
+  Serial.print("Manual Pump: ");
+  Serial.println(manualPump);
+}
+
+// ===================== TEMPERATURE SENSOR =====================
+OneWire oneWire(TEMP_PIN);
+DallasTemperature tempSensor(&oneWire);
+
+// ===================== OLED SETUP =====================
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C oled(
+  U8G2_R0,
+  D6,   // SCL
+  D7,   // SDA
+  U8X8_PIN_NONE
+);
+
+BlynkTimer timer;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(PIR_PIN, INPUT);
+  pinMode(WATER_SENSOR_PIN, INPUT_PULLUP);
+
+  pinMode(USB_LED_RELAY_PIN, OUTPUT);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(USB_LED_RELAY_PIN, RELAY_OFF);
+  digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+  digitalWrite(BUZZER_PIN, BUZZER_OFF);
+
+  tempSensor.begin();
+
+  oled.begin();
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tf);
+  oled.drawStr(0, 15, "Connecting WiFi");
+  oled.drawStr(0, 35, "Please wait...");
+  oled.sendBuffer();
+
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+
+  Serial.println("PIR warming up...");
+  delay(30000);
+  Serial.println("System ready.");
+
+  timer.setInterval(1000L, runSystem);
+}
+
+void loop() {
+  Blynk.run();
+  timer.run();
+}
+
+void runSystem() {
+  int pirValue = digitalRead(PIR_PIN);
+  int waterState = digitalRead(WATER_SENSOR_PIN);
+  int ldrValue = analogRead(LDR_PIN);
+
+  tempSensor.requestTemperatures();
+  float tempC = tempSensor.getTempCByIndex(0);
+
+  bool motionDetected = (pirValue == HIGH);
+  bool isDark = (ldrValue > ldrThreshold);
+  bool waterLow = (waterState == HIGH);
+
+  bool usbLedOn;
+  bool pumpOn;
+
+  if (systemMode == 0) {
+    // AUTO MODE
+    usbLedOn = isDark;
+    pumpOn = motionDetected;
+  } else {
+    // MANUAL MODE
+    usbLedOn = (manualLed == 1);
+    pumpOn = (manualPump == 1);
+  }
+
+  // Buzzer always automatic
+  bool buzzerOn = waterLow;
+
+  digitalWrite(USB_LED_RELAY_PIN, usbLedOn ? RELAY_ON : RELAY_OFF);
+  digitalWrite(PUMP_RELAY_PIN, pumpOn ? RELAY_ON : RELAY_OFF);
+  digitalWrite(BUZZER_PIN, buzzerOn ? BUZZER_ON : BUZZER_OFF);
+
+  // ===================== SEND TO BLYNK =====================
+  Blynk.virtualWrite(V0, tempC);
+  Blynk.virtualWrite(V1, ldrValue);
+  Blynk.virtualWrite(V2, motionDetected ? 1 : 0);
+  Blynk.virtualWrite(V3, waterLow ? 1 : 0);
+  Blynk.virtualWrite(V4, usbLedOn ? 1 : 0);
+  Blynk.virtualWrite(V5, pumpOn ? 1 : 0);
+  Blynk.virtualWrite(V6, buzzerOn ? 1 : 0);
+
+  // ===================== SERIAL MONITOR =====================
+  Serial.println("========== HYDROPURRR ==========");
+
+  Serial.print("Mode: ");
+  Serial.println(systemMode == 0 ? "AUTO" : "MANUAL");
+
+  Serial.print("Motion: ");
+  Serial.println(motionDetected ? "YES" : "NO");
+
+  Serial.print("Water: ");
+  Serial.println(waterLow ? "LOW" : "OK");
+
+  Serial.print("LDR: ");
+  Serial.print(ldrValue);
+  Serial.print(" | Light: ");
+  Serial.println(isDark ? "DARK" : "BRIGHT");
+
+  Serial.print("Temp: ");
+  Serial.print(tempC);
+  Serial.println(" C");
+
+  Serial.print("USB LED: ");
+  Serial.println(usbLedOn ? "ON" : "OFF");
+
+  Serial.print("Pump: ");
+  Serial.println(pumpOn ? "ON" : "OFF");
+
+  Serial.print("Buzzer: ");
+  Serial.println(buzzerOn ? "ON" : "OFF");
+
+  Serial.println("--------------------------------");
+
+  // ===================== OLED DISPLAY =====================
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tf);
+
+  oled.drawStr(0, 10, "HydroPurrr System");
+
+  oled.setCursor(0, 23);
+  oled.print("Mode: ");
+  oled.print(systemMode == 0 ? "AUTO" : "MANUAL");
+
+  oled.setCursor(0, 36);
+  oled.print("Temp: ");
+  oled.print(tempC);
+  oled.print(" C");
+
+  oled.setCursor(0, 49);
+  oled.print("Water: ");
+  oled.print(waterLow ? "LOW" : "OK");
+
+  oled.setCursor(0, 62);
+  oled.print("Pump:");
+  oled.print(pumpOn ? "ON " : "OFF");
+  oled.print(" LED:");
+  oled.print(usbLedOn ? "ON" : "OFF");
+
+  oled.sendBuffer();
+}
