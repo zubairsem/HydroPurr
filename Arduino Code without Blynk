@@ -1,0 +1,141 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+#include <U8g2lib.h>
+#include <Wire.h>
+
+// ===================== PIN SETUP =====================
+#define PIR_PIN D1
+#define WATER_SENSOR_PIN D2
+#define TEMP_PIN D5
+#define LDR_PIN A0
+
+#define USB_LED_RELAY_PIN D0
+#define PUMP_RELAY_PIN D8
+#define BUZZER_PIN D4
+
+// ===================== RELAY / BUZZER LOGIC =====================
+#define RELAY_ON LOW
+#define RELAY_OFF HIGH
+
+// If your buzzer is low-level trigger
+#define BUZZER_ON HIGH
+#define BUZZER_OFF LOW
+
+// ===================== LDR SETTING =====================
+int ldrThreshold = 500; // Higher value = DARK
+
+// ===================== TEMPERATURE SENSOR =====================
+OneWire oneWire(TEMP_PIN);
+DallasTemperature tempSensor(&oneWire);
+
+// ===================== OLED SETUP =====================
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C oled(
+  U8G2_R0,
+  D6,   // SCL
+  D7,   // SDA
+  U8X8_PIN_NONE
+);
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(PIR_PIN, INPUT);
+  pinMode(WATER_SENSOR_PIN, INPUT_PULLUP);
+
+  pinMode(USB_LED_RELAY_PIN, OUTPUT);
+  pinMode(PUMP_RELAY_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(USB_LED_RELAY_PIN, RELAY_OFF);
+  digitalWrite(PUMP_RELAY_PIN, RELAY_OFF);
+  digitalWrite(BUZZER_PIN, BUZZER_OFF);
+
+  tempSensor.begin();
+
+  oled.begin();
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tf);
+  oled.drawStr(0, 15, "Smart Cat System");
+  oled.drawStr(0, 35, "Starting...");
+  oled.sendBuffer();
+
+  Serial.println("PIR warming up...");
+  delay(30000);
+  Serial.println("System ready.");
+}
+
+void loop() {
+  int pirValue = digitalRead(PIR_PIN);
+  int waterState = digitalRead(WATER_SENSOR_PIN);
+  int ldrValue = analogRead(LDR_PIN);
+
+  tempSensor.requestTemperatures();
+  float tempC = tempSensor.getTempCByIndex(0);
+
+  bool motionDetected = (pirValue == HIGH);
+  bool isDark = (ldrValue > ldrThreshold);
+  bool waterLow = (waterState == HIGH);
+
+  // USB LED turns ON when dark
+  digitalWrite(USB_LED_RELAY_PIN, isDark ? RELAY_ON : RELAY_OFF);
+
+  // Pump turns ON when motion is detected
+  digitalWrite(PUMP_RELAY_PIN, motionDetected ? RELAY_ON : RELAY_OFF);
+
+  // Buzzer turns ON when water is low
+  digitalWrite(BUZZER_PIN, waterLow ? BUZZER_ON : BUZZER_OFF);
+
+  Serial.println("========== SMART CAT SYSTEM ==========");
+
+  Serial.print("Motion: ");
+  Serial.println(motionDetected ? "DETECTED" : "NO MOTION");
+
+  Serial.print("Water: ");
+  Serial.println(waterLow ? "LOW" : "OK");
+
+  Serial.print("LDR: ");
+  Serial.print(ldrValue);
+  Serial.print(" | Light: ");
+  Serial.println(isDark ? "DARK" : "BRIGHT");
+
+  Serial.print("Temperature: ");
+  Serial.print(tempC);
+  Serial.println(" C");
+
+  Serial.print("USB LED: ");
+  Serial.println(isDark ? "ON" : "OFF");
+
+  Serial.print("Pump: ");
+  Serial.println(motionDetected ? "ON" : "OFF");
+
+  Serial.print("Buzzer: ");
+  Serial.println(waterLow ? "ON" : "OFF");
+
+  Serial.println("--------------------------------------");
+
+  oled.clearBuffer();
+  oled.setFont(u8g2_font_6x10_tf);
+
+  oled.drawStr(0, 10, "Smart Cat System");
+
+  oled.setCursor(0, 24);
+  oled.print("Temp: ");
+  oled.print(tempC);
+  oled.print(" C");
+
+  oled.setCursor(0, 37);
+  oled.print("Water: ");
+  oled.print(waterLow ? "LOW" : "OK");
+
+  oled.setCursor(0, 50);
+  oled.print("Motion: ");
+  oled.print(motionDetected ? "YES" : "NO");
+
+  oled.setCursor(0, 63);
+  oled.print("Buzzer: ");
+  oled.print(waterLow ? "ON" : "OFF");
+
+  oled.sendBuffer();
+
+  delay(1000);
+}
