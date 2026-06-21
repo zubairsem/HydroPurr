@@ -1,0 +1,23 @@
+#define PIR_PIN D1
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIR_PIN, INPUT);
+
+  Serial.println("PIR warming up...");
+  delay(30000);
+
+  Serial.println("PIR ready.");
+}
+
+void loop() {
+  int pirValue = digitalRead(PIR_PIN);
+
+  if (pirValue == HIGH) {
+    Serial.println("Motion Detected");
+  } else {
+    Serial.println("No Motion");
+  }
+
+  delay(500);
+}
