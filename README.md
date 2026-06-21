@@ -32,4 +32,4 @@ HydroPurr is an IoT-based Smart Cat Water Dispenser that helps to reduce electri
 1. Alif Hafetz
 2. Muhammad Zubair
 3. Umie 'Aqilah
-4. Nurirdina
+4. Nur Irdina
