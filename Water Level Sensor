@@ -1,0 +1,18 @@
+#define WATER_SENSOR_PIN D2
+
+void setup() {
+  Serial.begin(115200);
+
+  // Internal pullup resistor
+  pinMode(WATER_SENSOR_PIN, INPUT_PULLUP);
+}
+
+void loop() {
+
+  int waterState = digitalRead(WATER_SENSOR_PIN);
+
+  Serial.print("Float Switch: ");
+  Serial.println(waterState);
+
+  delay(500);
+}
