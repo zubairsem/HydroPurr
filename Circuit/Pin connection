@@ -1,0 +1,11 @@
+| Component                             | Signal Pin | ESP8266 Connection |
+| ------------------------------------- | ---------- | ------------------ |
+| PIR Motion Sensor                     | OUT        | D1 (GPIO5)         |
+| Float Switch Sensor                   | Signal     | D2 (GPIO4)         |
+| DS18B20 Waterproof Temperature Sensor | DATA       | D5 (GPIO14)        |
+| LDR Sensor                            | AO         | A0                 |
+| LED Relay Module                      | IN         | D0 (GPIO16)        |
+| Water Pump Relay Module               | IN         | D8 (GPIO15)        |
+| Buzzer                                | +          | D4 (GPIO2)         |
+| OLED Display                          | SDA        | D7 (GPIO13)        |
+| OLED Display                          | SCL        | D6 (GPIO12)        |
